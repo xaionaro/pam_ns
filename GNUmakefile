@@ -59,5 +59,5 @@ ifeq ($(COMPRESS_MAN),yes)
 endif
 
 deinstall:
-	rm -f "$(INSTDIR)"/bin/$(binaries)
+	rm -f "$(DESTDIR)"/lib/security/$(binaries)
 
