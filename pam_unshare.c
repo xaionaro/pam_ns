@@ -68,6 +68,9 @@ PAM_EXTERN int pam_sm_open_session (
 		CMP_AND_UNSHARE ( pam, arg, CLONE_NEWUTS );
 		CMP_AND_UNSHARE ( pam, arg, CLONE_SYSVSEM );
 #undef CMP_AND_UNSHARE
+
+		x_pam_syslog ( pam, LOG_ERR, "invalid argument: %s (see man 2 pam_unshare)", arg );
+		return PAM_SESSION_ERR;
 	}
 
 	return PAM_SUCCESS;
