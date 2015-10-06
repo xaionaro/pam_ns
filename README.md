@@ -38,3 +38,5 @@ SEE ALSO
 ```
 
 See an alternative: [scraperwiki/pam_unshare](https://github.com/scraperwiki/pam_unshare)
+
+Build dependencies (in Debian terms): `libpam0g-dev`
