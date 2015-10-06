@@ -51,8 +51,9 @@ install:
 ifeq ($(STRIP_BINARY),yes)
 	strip --strip-unneeded -R .comment -R .GCC.command.line -R .note.gnu.gold-version $(binaries)
 endif
-	install -m 644 $(binaries) "$(DESTDIR)"/lib/security/
-	install -m 644 man/man8/pam_unshare.8 "$(INSTDIR)"/share/man/man8/
+
+	install -D -m 644 $(binaries) "$(DESTDIR)"/lib/security/$(binaries)
+	install -D -m 644 man/man8/pam_unshare.8 "$(INSTDIR)"/share/man/man8/pam_unshare.8
 ifeq ($(COMPRESS_MAN),yes)
 	rm -f "$(INSTDIR)"/share/man/man8/pam_unshare.8.gz
 	gzip "$(INSTDIR)"/share/man/man8/pam_unshare.8
