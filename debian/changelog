@@ -1,0 +1,5 @@
+libpam-unshare (0.1-1) unstable; urgency=low
+
+  * Release 0.1
+
+ -- Dmitry Yu Okunev <dyokunev@ut.mephi.ru>  Tue, 06 Oct 2015 17:35:15 +0300
