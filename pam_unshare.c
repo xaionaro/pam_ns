@@ -38,10 +38,10 @@ PAM_EXTERN int pam_sm_open_session (
     const char *argv[]
 )
 {
-	x_pam_syslog ( pam, LOG_INFO, "pam_unshare.so: open session" );
+	x_pam_syslog ( pam, LOG_INFO, "opening session" );
 
 	if ( argc < 1 ) {
-		x_pam_syslog ( pam, LOG_ERR, "pam_unshare.so: not enough arguments (see man 2 pam_unshare)" );
+		x_pam_syslog ( pam, LOG_ERR, "not enough arguments (see man 2 pam_unshare)" );
 		return PAM_SESSION_ERR;
 	}
 
@@ -50,9 +50,9 @@ PAM_EXTERN int pam_sm_open_session (
 
 #define CMP_AND_UNSHARE(pam, arg, v) \
 		if ( ! strcmp ( arg, XTOSTR(v) ) ) {\
-			x_pam_syslog ( pam, LOG_INFO, "pam_unshare.so: unsharing " XTOSTR(v) ); \
+			x_pam_syslog ( pam, LOG_INFO, "unsharing " XTOSTR(v) ); \
 			if (unshare(v)) {\
-				x_pam_syslog ( pam, LOG_ERR, "pam_unshare.so: got error while unshare("XTOSTR(v)"): %s", strerror(errno) );\
+				x_pam_syslog ( pam, LOG_ERR, "got error while unshare("XTOSTR(v)"): %s", strerror(errno) );\
 				return PAM_SESSION_ERR;\
 			}\
 			continue;\
@@ -81,6 +81,6 @@ PAM_EXTERN int pam_sm_close_session (
     const char *argv[]
 )
 {
-	x_pam_syslog ( pam, LOG_INFO, "pam_unshare.so: close session" );
+	x_pam_syslog ( pam, LOG_INFO, "closing session" );
 	return PAM_SUCCESS;
 }
