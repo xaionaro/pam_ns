@@ -7,13 +7,46 @@ pam_unshare \- an unshare() PAM module
 .SH SYNOPSIS
 session optional
 .B pam_unshare.so
-[...]
+<session|user|group> <...>
 
 .SH DESCRIPTION
 .B pam_unshare.so
 is a PAM module, that calls
 .BR unshare (2)
 with specified argument.
+
+The first argument defines the strategy. Possible values:
+.RS
+.B session
+.RS
+Just call
+.BR unshare (2)
+on every new session.
+.RE
+.B user
+.RS
+Call
+.BR unshare (2)
+on creating the first user session. If the session is not the first then connect
+to namespaces of an already existing session.
+.RE
+.B group
+.RS
+Call
+.BR unshare (2)
+on creating the first session of any user of the group. If the session is not the first then connect
+to namespaces of an already existing session.
+.RE
+.RE
+
+.B Warning!
+Modes
+.BR user " and " group
+uses semaphores
+.BR "" ( sem_overview (7))
+to prevent race conditions and requires for the module to be installed to "/lib/security/pam_unshare.so" to work properly due to a hack with
+.BR ftok (3)
+in it's code.
 
 .SH OPTIONS
 Possible options are:
@@ -43,7 +76,7 @@ For details read
 .BR unshare (2).
 
 .SH EXAMPLES
-session optional pam_unshare.so CLONE_NEWIPC CLONE_NEWNS
+session optional pam_unshare.so user CLONE_NEWIPC CLONE_NEWNS
 
 .SH AUTHOR
 Dmitry Yu Okunev <dyokunev@ut.mephi.ru> 0x8E30679C
