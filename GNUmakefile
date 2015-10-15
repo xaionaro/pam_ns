@@ -51,7 +51,7 @@ install:
 ifeq ($(STRIP_BINARY),yes)
 	strip --strip-unneeded -R .comment -R .GCC.command.line -R .note.gnu.gold-version $(binaries)
 endif
-
+	# Don't forget to fix PATH_SO_PAM_UNSHARE in pam_unshare.c after editing installation path
 	install -D -m 644 $(binaries) "$(DESTDIR)"/lib/security/$(binaries)
 	install -D -m 644 man/man8/pam_unshare.8 "$(INSTDIR)"/share/man/man8/pam_unshare.8
 ifeq ($(COMPRESS_MAN),yes)
