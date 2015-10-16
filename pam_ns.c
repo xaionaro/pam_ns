@@ -28,6 +28,10 @@
 #include <security/pam_modules.h>
 #include <proc/readproc.h>
 #include <pwd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdio.h>
+
 
 
 #define PATH_SO_pam_ns "/lib/security/pam_ns.so"
@@ -74,7 +78,7 @@ static inline int ns_unlock (
 
 	return 0;
 }
-
+/*
 static inline int ns2procns_map (
     int clone_flag
 )
@@ -102,6 +106,35 @@ static inline int ns2procns_map (
 	// TODO: This line shouldn't never happened, so it's required to add some debugging in this place
 	return 0;
 }
+*/
+
+static inline const char *ns_name (
+    int clone_flag
+)
+{
+	switch ( clone_flag ) {
+		case CLONE_NEWIPC:
+			return "ipc";
+
+		case CLONE_NEWNET:
+			return "net";
+
+		case CLONE_NEWNS:
+			return "mnt";
+
+		case CLONE_NEWPID:
+			return "pid";
+
+		case CLONE_NEWUSER:
+			return "user";
+
+		case CLONE_NEWUTS:
+			return "uts";
+	}
+
+	// TODO: This line shouldn't never happened, so it's required to add some debugging in this place
+	return "doesnt///exists///";
+}
 
 static inline int ns_attach (
     pam_handle_t *pam,
@@ -117,11 +150,19 @@ static inline int ns_attach (
 		const char *arg = argv[argc];
 #define CMP_AND_SETNS(pam, arg, v) \
 	if ( ! strcmp ( arg, #v ) ) {\
-		x_pam_syslog ( pam, LOG_INFO, "unsharing " #v ); \
-		if (setns(proc_info_p->ns[ns2procns_map(v)], v)) {\
-			x_pam_syslog ( pam, LOG_ERR, "got error while setns(%lu, "#v"): %s", proc_info_p->ns[ns2procns_map(v)], strerror(errno) );\
+		char path[PATH_MAX+1];\
+		snprintf(path, PATH_MAX, "/proc/%u/ns/%s", proc_info_p->tid, ns_name(v));\
+		x_pam_syslog ( pam, LOG_INFO, "attaching " #v " by path \"%s\"", path ); \
+		int fd = open(path, O_RDONLY);\
+		if (fd == -1) {\
+			x_pam_syslog ( pam, LOG_ERR, "ggt error while open(\"%s\", O_RDONLY): %s", path, strerror(errno) );\
 			return PAM_SESSION_ERR;\
 		}\
+		if (setns(fd, v)) {\
+			x_pam_syslog ( pam, LOG_ERR, "got error while setns(%i [path \"%s\"], "#v"): %s", fd, path, strerror(errno) );\
+			return PAM_SESSION_ERR;\
+		}\
+		close(fd);\
 		continue;\
 	}
 		CMP_AND_SETNS ( pam, arg, CLONE_NEWIPC );
@@ -214,33 +255,34 @@ static inline int ns_find_attach (
     const char *argv[]
 )
 {
-	PROCTAB *proc = openproc ( PROC_FILLNS );
+	PROCTAB *proc = openproc ( 0 );
 	proc_t proc_info;
 	memset ( &proc_info, 0, sizeof ( proc_info ) );
 	uid_t user_uid = -1;
 	gid_t user_gid = -1;
 
 	if ( pam_get_uidgid ( pam, flags, &user_uid, &user_gid ) != PAM_SUCCESS )
-		return PAM_SESSION_ERR;
+		return PAM_SYSTEM_ERR;
 
 	while ( readproc ( proc, &proc_info ) != NULL ) {
+		//x_pam_syslog ( pam, LOG_INFO, "proc info: tid == %u; uid == %u; gid == %u", proc_info.tid, proc_info.euid, proc_info.egid );
 		switch ( groupby ) {
 			case GB_USER:
-				if ( proc_info.ruid == user_uid ) {
+				if ( proc_info.euid == user_uid ) {
 					return ns_attach ( pam, flags, &proc_info, argc, argv );
 				}
 
 				break;
 
 			case GB_GROUP:
-				if ( proc_info.rgid == user_gid ) {
+				if ( proc_info.egid == user_gid ) {
 					return ns_attach ( pam, flags, &proc_info, argc, argv );
 				}
 
 				break;
 
-			default:
-				{} // anti-warning
+			default: {
+				} // anti-warning
 		}
 	}
 
@@ -261,31 +303,48 @@ static inline int ns_setup (
 
 		case GB_USER:
 		case GB_GROUP: {
+				int rc_ns;
+#ifdef LOCKS
 				struct sembuf sb;
 				int semid;
-				int rc_ns;
 				int rc;
+				x_pam_syslog ( pam, LOG_INFO, "locking via semaphores" );
 
 				if ( ( rc = ns_lock ( &sb, &semid ) ) ) {
 					x_pam_syslog ( pam, LOG_ERR, "internal error: cannot setup semaphores (rc == %u)", rc );
 					return PAM_SESSION_ERR;
 				}
 
+#endif
 				rc_ns = ns_find_attach ( pam, flags, groupby, argc, argv );
 
-				if ( rc_ns == PAM_SESSION_ERR )				// if didn't found where to attach to
-					rc_ns = ns_detach ( pam, flags, argc, argv );	// then just detach from current namespaces
+				switch ( rc_ns ) {
+					case PAM_SYSTEM_ERR:					// if didn't found where to attach to
+						rc_ns = ns_detach ( pam, flags, argc, argv );	// then just detach from current namespaces
+						break;
+
+					case PAM_SUCCESS:
+						break;
+
+					default:
+						x_pam_syslog ( pam, LOG_ERR, "internal error: unknown return code from ns_find_attach(): %u", rc_ns );
+						break;
+				}
+
+#ifdef LOCKS
+				x_pam_syslog ( pam, LOG_INFO, "unlocking via semaphores" );
 
 				if ( ( rc = ns_unlock ( &sb, &semid ) ) ) {
 					x_pam_syslog ( pam, LOG_ERR, "internal error: cannot free semaphores (rc == %u)", rc );
 					return PAM_SESSION_ERR;
 				}
 
+#endif
 				return rc_ns;
 			}
 
-		default:
-			{} // anti-warning
+		default: {
+			} // anti-warning
 	}
 
 	x_pam_syslog ( pam, LOG_ERR, "internal error: unknown \"groupby\" value: %u", groupby );
