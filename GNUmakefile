@@ -20,18 +20,18 @@ INC := $(INC)
 INSTDIR = $(DESTDIR)$(PREFIX)
 
 objs=\
-pam_unshare.o\
+pam_ns.o\
 
-binary_pam_unshare=pam_unshare.so
+binary_pam_ns=pam_ns.so
 
-binaries=$(binary_pam_unshare)
+binaries=$(binary_pam_ns)
 
 .PHONY: doc
 
-all: binary_pam_unshare_so
+all: binary_pam_ns_so
 
-binary_pam_unshare_so: $(objs) $(objs_pam_unshare)
-	$(CC) $(CARCHFLAGS) $(CFLAGS) $(LDFLAGS) $(objs) $(LIBS) -shared -o $(binary_pam_unshare)
+binary_pam_ns_so: $(objs) $(objs_pam_ns)
+	$(CC) $(CARCHFLAGS) $(CFLAGS) $(LDFLAGS) $(objs) $(LIBS) -shared -o $(binary_pam_ns)
 
 %.o: %.c
 	$(CC) $(CARCHFLAGS) $(CFLAGS) $(INC) $< -fPIC -c -o $@
@@ -51,12 +51,12 @@ install:
 ifeq ($(STRIP_BINARY),yes)
 	strip --strip-unneeded -R .comment -R .GCC.command.line -R .note.gnu.gold-version $(binaries)
 endif
-	# Don't forget to fix PATH_SO_PAM_UNSHARE in pam_unshare.c after editing installation path
+	# Don't forget to fix PATH_SO_pam_ns in pam_ns.c after editing installation path
 	install -D -m 644 $(binaries) "$(DESTDIR)"/lib/security/$(binaries)
-	install -D -m 644 man/man8/pam_unshare.8 "$(INSTDIR)"/share/man/man8/pam_unshare.8
+	install -D -m 644 man/man8/pam_ns.8 "$(INSTDIR)"/share/man/man8/pam_ns.8
 ifeq ($(COMPRESS_MAN),yes)
-	rm -f "$(INSTDIR)"/share/man/man8/pam_unshare.8.gz
-	gzip "$(INSTDIR)"/share/man/man8/pam_unshare.8
+	rm -f "$(INSTDIR)"/share/man/man8/pam_ns.8.gz
+	gzip "$(INSTDIR)"/share/man/man8/pam_ns.8
 endif
 
 deinstall:

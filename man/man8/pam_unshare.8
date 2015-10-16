@@ -1,16 +1,16 @@
 .\" Sorry for my English 
 .\" --Dmitry Yu Okunev <dyokunev@ut.mephi.ru> 0x8E30679C
 .\"
-.TH PAM_UNSHARE 8 "OCTOBER 2015" Linux "Linux-PAM Manual"
+.TH pam_ns 8 "OCTOBER 2015" Linux "Linux-PAM Manual"
 .SH NAME
-pam_unshare \- an unshare() PAM module
+pam_ns \- an unshare()/setns() PAM module
 .SH SYNOPSIS
 session optional
-.B pam_unshare.so
+.B pam_ns.so
 <session|user|group> <...>
 
 .SH DESCRIPTION
-.B pam_unshare.so
+.B pam_ns.so
 is a PAM module, that calls
 .BR unshare (2)
 with specified argument.
@@ -28,14 +28,16 @@ on every new session.
 Call
 .BR unshare (2)
 on creating the first user session. If the session is not the first then connect
-to namespaces of an already existing session.
+to namespaces of an already existing session using
+.BR setns (2).
 .RE
 .B group
 .RS
 Call
 .BR unshare (2)
 on creating the first session of any user of the group. If the session is not the first then connect
-to namespaces of an already existing session.
+to namespaces of an already existing session using
+.BR setns (2).
 .RE
 .RE
 
@@ -44,17 +46,17 @@ Modes
 .BR user " and " group
 uses semaphores
 .BR "" ( sem_overview (7))
-to prevent race conditions and requires for the module to be installed to "/lib/security/pam_unshare.so" to work properly due to a hack with
+to prevent race conditions and requires for the module to be installed to "/lib/security/pam_ns.so" to work properly due to a hack with
 .BR ftok (3)
 in it's code.
+
+The search of an appropriate process (to get namespaces to attach to) is performed by scanning /proc (see 
+.BR proc (5)).
+The "/proc" should be mounted to get this plugin work properly.
 
 .SH OPTIONS
 Possible options are:
 .RS
-CLONE_FILES
-.br
-CLONE_FS
-.br
 CLONE_NEWIPC
 .br
 CLONE_NEWNET
@@ -66,8 +68,6 @@ CLONE_NEWPID
 CLONE_NEWUSER
 .br
 CLONE_NEWUTS
-.br
-CLONE_SYSVSEM
 .RE
 .br
  
@@ -76,15 +76,19 @@ For details read
 .BR unshare (2).
 
 .SH EXAMPLES
-session optional pam_unshare.so user CLONE_NEWIPC CLONE_NEWNS
+session optional pam_ns.so user CLONE_NEWIPC CLONE_NEWNS
 
 .SH AUTHOR
 Dmitry Yu Okunev <dyokunev@ut.mephi.ru> 0x8E30679C
 .SH SUPPORT
 You can get support on IRC-channel in Freenode "#clsync" or on
 github's issue tracking system of
-.URL https://github.com/xaionaro/pam_unshare "the pam_unshare repository" .
+.URL https://github.com/xaionaro/pam_ns "the pam_ns repository" .
 .SH "SEE ALSO"
 .BR unshare (2),
-.BR pam (3)
+.BR setns (2),
+.BR pam (3),
+.BR proc (5),
+.BR sem_overview (7)
+.BR ftok (3)
 
