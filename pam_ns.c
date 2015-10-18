@@ -265,7 +265,7 @@ static inline int ns_find_attach (
 		return PAM_SYSTEM_ERR;
 
 	while ( readproc ( proc, &proc_info ) != NULL ) {
-		x_pam_syslog ( pam, LOG_INFO, "proc info: tid == %u; uid == %u; gid == %u (searching for: %i; %u; %u)", proc_info.tid, proc_info.euid, proc_info.egid, groupby, user_uid, user_gid );
+		//x_pam_syslog ( pam, LOG_INFO, "proc info: tid == %u; uid == %u; gid == %u (searching for: %i; %u; %u)", proc_info.tid, proc_info.euid, proc_info.egid, groupby, user_uid, user_gid );
 		switch ( groupby ) {
 			case GB_USER:
 				if ( proc_info.euid == user_uid ) {
