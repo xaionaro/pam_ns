@@ -47,11 +47,11 @@ distclean: clean
 doc:
 	doxygen .doxygen
 
+# Don't forget to fix PATH_SO_PAM_NS in pam_ns.c after editing installation path
 install:
 ifeq ($(STRIP_BINARY),yes)
 	strip --strip-unneeded -R .comment -R .GCC.command.line -R .note.gnu.gold-version $(binaries)
 endif
-	# Don't forget to fix PATH_SO_pam_ns in pam_ns.c after editing installation path
 	install -D -m 644 $(binaries) "$(DESTDIR)"/lib/security/$(binaries)
 	install -D -m 644 man/man8/pam_ns.8 "$(INSTDIR)"/share/man/man8/pam_ns.8
 ifeq ($(COMPRESS_MAN),yes)
