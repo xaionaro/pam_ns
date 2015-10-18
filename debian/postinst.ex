@@ -1,5 +1,5 @@
 #!/bin/sh
-# postinst script for libpam-unshare
+# postinst script for libpam-ns
 #
 # see: dh_installdeb(1)
 

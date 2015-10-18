@@ -27,7 +27,7 @@ manpage.1: manpage.sgml
   <!ENTITY dhemail     "<email>dyokunev@ut.mephi.ru</email>">
   <!ENTITY dhusername  "Dmitry Yu Okunev">
   <!ENTITY dhucpackage "<refentrytitle>LIBPAM-UNSHARE</refentrytitle>">
-  <!ENTITY dhpackage   "libpam-unshare">
+  <!ENTITY dhpackage   "libpam-ns">
 
   <!ENTITY debian      "<productname>Debian</productname>">
   <!ENTITY gnu         "<acronym>GNU</acronym>">

@@ -18,16 +18,16 @@
 .\" .sp <n>    insert n+1 empty lines
 .\" for manpage-specific macros, see man(7)
 .SH NAME
-libpam-unshare \- program to do something
+libpam-ns \- program to do something
 .SH SYNOPSIS
-.B libpam-unshare
+.B libpam-ns
 .RI [ options ] " files" ...
 .br
 .B bar
 .RI [ options ] " files" ...
 .SH DESCRIPTION
 This manual page documents briefly the
-.B libpam-unshare
+.B libpam-ns
 and
 .B bar
 commands.
@@ -35,7 +35,7 @@ commands.
 .\" TeX users may be more comfortable with the \fB<whatever>\fP and
 .\" \fI<whatever>\fP escape sequences to invode bold face and italics,
 .\" respectively.
-\fBlibpam-unshare\fP is a program that...
+\fBlibpam-ns\fP is a program that...
 .SH OPTIONS
 These programs follow the usual GNU command line syntax, with long
 options starting with two dashes (`-').

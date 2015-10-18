@@ -1,6 +1,6 @@
 #!/bin/sh
 ### BEGIN INIT INFO
-# Provides:          libpam-unshare
+# Provides:          libpam-ns
 # Required-Start:    $local_fs $network $remote_fs $syslog
 # Required-Stop:     $local_fs $network $remote_fs $syslog
 # Default-Start:     2 3 4 5
@@ -17,9 +17,9 @@
 
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
-DESC="libpam-unshare"
-NAME=libpam-unshare
-DAEMON=/usr/sbin/libpam-unshare
+DESC="libpam-ns"
+NAME=libpam-ns
+DAEMON=/usr/sbin/libpam-ns
 DAEMON_ARGS=""
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME

@@ -1,16 +1,16 @@
-Source: libpam-unshare
+Source: libpam-ns
 Section: admin
 Priority: extra
 Maintainer: Dmitry Yu Okunev <dyokunev@ut.mephi.ru>
-Build-Depends: debhelper (>= 9), libpam0g-dev
+Build-Depends: debhelper (>= 9), libpam0g-dev, libprocps3-dev
 Standards-Version: 3.9.5
-Homepage: https://github.com/xaionaro/pam_unshare
-#Vcs-Git: git://anonscm.debian.org/collab-maint/libpam-unshare.git
-#Vcs-Browser: http://anonscm.debian.org/?p=collab-maint/libpam-unshare.git;a=summary
+Homepage: https://github.com/xaionaro/pam_ns
+#Vcs-Git: git://anonscm.debian.org/collab-maint/libpam-ns.git
+#Vcs-Browser: http://anonscm.debian.org/?p=collab-maint/libpam-ns.git;a=summary
 
-Package: libpam-unshare
+Package: libpam-ns
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: PAM module to unshare() sessions
- This PAM module allows to call syscall "unshare()" with specified
- arguments for sessions.
+Description: PAM module to call unshare()/setns()
+ This PAM module allows to unshare namespaces and group them by uid or gid if
+ required.

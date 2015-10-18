@@ -1,4 +1,4 @@
 #
-# Regular cron jobs for the libpam-unshare package
+# Regular cron jobs for the libpam-ns package
 #
-0 4	* * *	root	[ -x /usr/bin/libpam-unshare_maintenance ] && /usr/bin/libpam-unshare_maintenance
+0 4	* * *	root	[ -x /usr/bin/libpam-ns_maintenance ] && /usr/bin/libpam-ns_maintenance

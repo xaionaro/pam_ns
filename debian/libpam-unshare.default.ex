@@ -1,6 +1,6 @@
-# Defaults for libpam-unshare initscript
-# sourced by /etc/init.d/libpam-unshare
-# installed at /etc/default/libpam-unshare by the maintainer scripts
+# Defaults for libpam-ns initscript
+# sourced by /etc/init.d/libpam-ns
+# installed at /etc/default/libpam-ns by the maintainer scripts
 
 #
 # This is a POSIX shell fragment
