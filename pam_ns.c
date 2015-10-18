@@ -242,7 +242,7 @@ static inline int pam_get_uidgid (
 		*user_uid_p = user->pw_uid;
 
 	if ( user_gid_p != NULL )
-		*user_uid_p = user->pw_gid;
+		*user_gid_p = user->pw_gid;
 
 	return PAM_SUCCESS;
 }
@@ -265,7 +265,7 @@ static inline int ns_find_attach (
 		return PAM_SYSTEM_ERR;
 
 	while ( readproc ( proc, &proc_info ) != NULL ) {
-		//x_pam_syslog ( pam, LOG_INFO, "proc info: tid == %u; uid == %u; gid == %u", proc_info.tid, proc_info.euid, proc_info.egid );
+		x_pam_syslog ( pam, LOG_INFO, "proc info: tid == %u; uid == %u; gid == %u (searching for: %i; %u; %u)", proc_info.tid, proc_info.euid, proc_info.egid, groupby, user_uid, user_gid );
 		switch ( groupby ) {
 			case GB_USER:
 				if ( proc_info.euid == user_uid ) {
@@ -281,8 +281,7 @@ static inline int ns_find_attach (
 
 				break;
 
-			default: {
-				} // anti-warning
+			default: return PAM_SYSTEM_ERR;
 		}
 	}
 
@@ -319,7 +318,7 @@ static inline int ns_setup (
 				rc_ns = ns_find_attach ( pam, flags, groupby, argc, argv );
 
 				switch ( rc_ns ) {
-					case PAM_SYSTEM_ERR:					// if didn't found where to attach to
+					case PAM_SESSION_ERR:					// if didn't found where to attach to
 						rc_ns = ns_detach ( pam, flags, argc, argv );	// then just detach from current namespaces
 						break;
 
