@@ -1,5 +1,5 @@
 Source: pam-ns
-Section: extra
+Section: admin
 Priority: optional
 Maintainer: Dmitry Yu Okunev <dyokunev@ut.mephi.ru>
 Build-Depends: debhelper (>=9), libpam0g-dev, libprocps3-dev
@@ -11,7 +11,7 @@ Homepage: https://github.com/xaionaro/pam_ns
 Package: pam-ns
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: an unshare()/setns() PAM module
+Description: unshare()/setns() PAM module
  pam_ns.so is a PAM module, that calls unshare() with specified
  argument.
  SYNOPSIS: session optional pam_ns.so <session|user|group> <...>
