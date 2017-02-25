@@ -19,6 +19,7 @@
 #define _GNU_SOURCE
 #include <errno.h>
 #include <string.h>
+#include <stdlib.h>
 #include <syslog.h>
 #include <sched.h>
 #include <sys/types.h>
@@ -33,8 +34,9 @@
 #include <stdio.h>
 
 
-
 #define PATH_SO_pam_ns "/lib/security/pam_ns.so"
+
+#define PATH_SETGROUPS "/proc/self/setgroups"
 
 #define x_pam_syslog(...) if ((flags & PAM_SILENT) == 0) pam_syslog(__VA_ARGS__)
 
@@ -136,6 +138,115 @@ static inline const char *ns_name (
 	return "doesnt///exists///";
 }
 
+static inline int setgroups_deny (
+    pam_handle_t *pam,
+    int flags
+)
+{
+	int fd;
+	fd = open ( PATH_SETGROUPS, O_CLOEXEC | O_WRONLY );
+
+	if ( fd == -1 ) {
+		if ( errno == ENOENT ) {
+			return 0;
+		}
+
+		x_pam_syslog ( pam, LOG_ERR, "Cannot open() file \""PATH_SETGROUPS"\": %s", strerror ( errno ) );
+		return -1;
+	}
+
+	if ( write ( fd, "deny", 4 ) != 4 ) {
+		x_pam_syslog ( pam, LOG_ERR, "Something gone wrong while writting to \""PATH_SETGROUPS"\" (current errno: %i: %s) (current uid/gid/euid/egid: %i/%i/%i/%i)", errno, strerror ( errno ), getuid(), getgid(), geteuid(), getegid() );
+		return -1;
+	}
+
+	if ( close ( fd ) == -1 ) {
+		x_pam_syslog ( pam, LOG_ERR, "Cannot close() file \""PATH_SETGROUPS"\": %s", strerror ( errno ) );
+		return -1;
+	}
+
+	x_pam_syslog ( pam, LOG_INFO, "sent \"deny\" to \"" PATH_SETGROUPS "\"" );
+	return 0;
+}
+
+static inline int set_xidmap (
+    pam_handle_t *pam,
+    int flags,
+    const char *arg,
+    const char *map_path
+)
+{
+	if ( map_path == NULL || arg == NULL ) {
+		x_pam_syslog ( pam, LOG_ERR, "Internal error: map_path == NULL || arg == NULL" );
+		return -1;
+	}
+
+	int mapfd = open ( map_path, O_CLOEXEC | O_WRONLY );
+
+	if ( mapfd == -1 ) {
+		x_pam_syslog ( pam, LOG_ERR, "Cannot open() file \"%s\": %s", map_path, strerror ( errno ) );
+		return -1;
+	}
+
+	char *buf = strdup ( arg );
+
+	if ( buf == NULL ) {
+		x_pam_syslog ( pam, LOG_ERR, "Cannot allocate memory for a buffer: %s", strerror ( errno ) );
+		return -1;
+	}
+
+	char *ptr = buf;
+
+	while ( *ptr != 0 ) {
+		switch ( *ptr ) {
+			case ':':
+				*ptr = ' ';
+				break;
+
+			case ',':
+				*ptr = '\n';
+				break;
+		}
+
+		ptr++;
+	}
+
+	ssize_t l = strlen ( buf );
+	ssize_t w = write ( mapfd, buf, l );
+
+	if ( w != l ) {
+		x_pam_syslog ( pam, LOG_ERR, "Something gone wrong while writting to \"%s\": %li != %li (current errno: %i: %s) (current uid/gid/euid/egid: %i/%i/%i/%i), value: \"%s\"", map_path, w, l, errno, strerror ( errno ), getuid(), getgid(), geteuid(), getegid(), buf );
+		return -1;
+	}
+
+	x_pam_syslog ( pam, LOG_INFO, "sent \"%s\" to \"%s\"", buf, map_path );
+
+	if ( close ( mapfd ) == -1 ) {
+		x_pam_syslog ( pam, LOG_ERR, "Cannot close() file \"%s\": %s", map_path, strerror ( errno ) );
+		return -1;
+	}
+
+	return 0;
+}
+
+static inline int set_uidmap (
+    pam_handle_t *pam,
+    int flags,
+    const char *arg
+)
+{
+	return set_xidmap ( pam, flags, arg, "/proc/self/uid_map" );
+}
+
+static inline int set_gidmap (
+    pam_handle_t *pam,
+    int flags,
+    const char *arg
+)
+{
+	return set_xidmap ( pam, flags, arg, "/proc/self/gid_map" );
+}
+
 static inline int ns_attach (
     pam_handle_t *pam,
     int flags,
@@ -148,14 +259,14 @@ static inline int ns_attach (
 
 	while ( --argc ) {
 		const char *arg = argv[argc];
-#define CMP_AND_SETNS(pam, arg, v) \
+#define CMP_AND_SETNS(pam, arg, v, onsuccess) \
 	if ( ! strcmp ( arg, #v ) ) {\
 		char path[PATH_MAX+1];\
 		snprintf(path, PATH_MAX, "/proc/%u/ns/%s", proc_info_p->tid, ns_name(v));\
 		x_pam_syslog ( pam, LOG_INFO, "attaching " #v " by path \"%s\"", path ); \
 		int fd = open(path, O_RDONLY);\
 		if (fd == -1) {\
-			x_pam_syslog ( pam, LOG_ERR, "ggt error while open(\"%s\", O_RDONLY): %s", path, strerror(errno) );\
+			x_pam_syslog ( pam, LOG_ERR, "got error while open(\"%s\", O_RDONLY): %s", path, strerror(errno) );\
 			return PAM_SESSION_ERR;\
 		}\
 		if (setns(fd, v)) {\
@@ -163,21 +274,23 @@ static inline int ns_attach (
 			return PAM_SESSION_ERR;\
 		}\
 		close(fd);\
-		continue;\
+		onsuccess;\
 	}
-		CMP_AND_SETNS ( pam, arg, CLONE_NEWIPC );
-		CMP_AND_SETNS ( pam, arg, CLONE_NEWNET );
-		CMP_AND_SETNS ( pam, arg, CLONE_NEWNS );
-		CMP_AND_SETNS ( pam, arg, CLONE_NEWPID );
-		CMP_AND_SETNS ( pam, arg, CLONE_NEWUSER );
-		CMP_AND_SETNS ( pam, arg, CLONE_NEWUTS );
+		CMP_AND_SETNS ( pam, arg, CLONE_NEWIPC, continue );
+		CMP_AND_SETNS ( pam, arg, CLONE_NEWNET, continue );
+		CMP_AND_SETNS ( pam, arg, CLONE_NEWNS, continue );
+		CMP_AND_SETNS ( pam, arg, CLONE_NEWPID, continue );
+		CMP_AND_SETNS ( pam, arg, CLONE_NEWUTS, continue );
+		CMP_AND_SETNS ( pam, arg, CLONE_NEWUSER, continue );
 #undef CMP_AND_UNSHARE
-		x_pam_syslog ( pam, LOG_ERR, "invalid argument: %s (see \"man 2 pam_ns\")", arg );
+		x_pam_syslog ( pam, LOG_ERR, "setns: invalid argument: \"%s\" (see \"man 2 pam_ns\")", arg );
 		return PAM_SESSION_ERR;
 	}
 
-	return PAM_SUCCESS;;
+	return PAM_SUCCESS;
 }
+
+
 
 static inline int ns_detach (
     pam_handle_t *pam,
@@ -186,28 +299,81 @@ static inline int ns_detach (
     const char *argv[]
 )
 {
-	while ( --argc ) {
-		const char *arg = argv[argc];
-#define CMP_AND_UNSHARE(pam, arg, v) \
+	int argi = 1;
+
+	while ( argi < argc ) {
+		const char *arg = argv[argi++];
+#define CMP_AND_UNSHARE(pam, arg, v, onsuccess) \
 	if ( ! strcmp ( arg, #v ) ) {\
 		x_pam_syslog ( pam, LOG_INFO, "unsharing " #v ); \
 		if (unshare(v)) {\
 			x_pam_syslog ( pam, LOG_ERR, "got error while unshare("#v"): %s", strerror(errno) );\
 			return PAM_SESSION_ERR;\
 		}\
-		continue;\
+		onsuccess;\
 	}
-		CMP_AND_UNSHARE ( pam, arg, CLONE_FILES );
-		CMP_AND_UNSHARE ( pam, arg, CLONE_FS );
-		CMP_AND_UNSHARE ( pam, arg, CLONE_NEWIPC );
-		CMP_AND_UNSHARE ( pam, arg, CLONE_NEWNET );
-		CMP_AND_UNSHARE ( pam, arg, CLONE_NEWNS );
-		CMP_AND_UNSHARE ( pam, arg, CLONE_NEWPID );
-		CMP_AND_UNSHARE ( pam, arg, CLONE_NEWUSER );
-		CMP_AND_UNSHARE ( pam, arg, CLONE_NEWUTS );
-		CMP_AND_UNSHARE ( pam, arg, CLONE_SYSVSEM );
+		CMP_AND_UNSHARE ( pam, arg, CLONE_FILES, continue );
+		CMP_AND_UNSHARE ( pam, arg, CLONE_FS, continue );
+		CMP_AND_UNSHARE ( pam, arg, CLONE_NEWIPC, continue );
+		CMP_AND_UNSHARE ( pam, arg, CLONE_NEWNET, continue );
+		CMP_AND_UNSHARE ( pam, arg, CLONE_NEWNS, continue );
+		CMP_AND_UNSHARE ( pam, arg, CLONE_NEWPID, continue );
+		CMP_AND_UNSHARE ( pam, arg, CLONE_NEWUTS, continue );
+		CMP_AND_UNSHARE ( pam, arg, CLONE_SYSVSEM, continue );
+
+		if ( ! strcmp ( arg, "CLONE_NEWUSER" ) ) {
+			if ( argc - argi < 2 ) {
+				x_pam_syslog ( pam, LOG_ERR, "expected additional arguments to for \"CLONE_NEWUSER\" (see \"man 2 pam_ns\")" );
+				return PAM_SESSION_ERR;
+			}
+
+			//x_pam_syslog ( pam, LOG_INFO, "preparing for CLONE_NEWUSER: fork (current uid/gid/euid/egid: %i/%i/%i/%i)", getuid(), getgid(), geteuid(), getegid()  );
+			/*pid_t child_pid = fork();
+			if (child_pid == -1) {
+				x_pam_syslog ( pam, LOG_ERR, "got error while fork(): %s", strerror(errno) );
+				return PAM_SESSION_ERR;
+			}
+
+			if (child_pid == 0) */
+			x_pam_syslog ( pam, LOG_INFO, "unsharing CLONE_NEWUSER" );
+
+			if ( unshare ( CLONE_NEWUSER ) ) {
+				x_pam_syslog ( pam, LOG_ERR, "got error while unshare(CLONE_NEWUSER): %s", strerror ( errno ) );
+				return PAM_SESSION_ERR;
+			}
+
+			if ( setgroups_deny ( pam, flags ) )
+			{
+				x_pam_syslog ( pam, LOG_ERR, "Got error while sending data to "PATH_SETGROUPS );
+				return PAM_SESSION_ERR;
+			}
+
+
+			if ( set_uidmap ( pam, flags, argv[argi++] ) ) {
+				x_pam_syslog ( pam, LOG_ERR, "Got error while sending data to /proc/self/uid_map" );
+				return PAM_SESSION_ERR;
+			}
+
+			if ( set_gidmap ( pam, flags, argv[argi++] ) ) {
+				x_pam_syslog ( pam, LOG_ERR, "Got error while sending data to /proc/self/gid_map" );
+				return PAM_SESSION_ERR;
+			}
+
+			/*if ( set_uidmap ( pam, flags, "0 0 1,1000 1000 1" ) ) {
+				x_pam_syslog ( pam, LOG_ERR, "Got error while sending data to /proc/self/uid_map" );
+				return PAM_SESSION_ERR;
+			}
+
+			if ( set_gidmap ( pam, flags, "0 0 1,1000 1000 1" ) ) {
+				x_pam_syslog ( pam, LOG_ERR, "Got error while sending data to /proc/self/gid_map" );
+				return PAM_SESSION_ERR;
+			}*/
+
+			continue;
+		}
+
 #undef CMP_AND_UNSHARE
-		x_pam_syslog ( pam, LOG_ERR, "invalid argument: %s (see \"man 2 pam_ns\")", arg );
+		x_pam_syslog ( pam, LOG_ERR, "unsharing: invalid argument: \"%s\" (see \"man 2 pam_ns\")", arg );
 		return PAM_SESSION_ERR;
 	}
 
@@ -281,7 +447,8 @@ static inline int ns_find_attach (
 
 				break;
 
-			default: return PAM_SYSTEM_ERR;
+			default:
+				return PAM_SYSTEM_ERR;
 		}
 	}
 
@@ -376,7 +543,7 @@ PAM_EXTERN int pam_sm_open_session (
 		} else if ( !strcmp ( arg, "group" ) ) {
 			groupby = GB_GROUP;
 		} else {
-			x_pam_syslog ( pam, LOG_ERR, "invalid argument: %s (see \"man 2 pam_ns\"; should be \"session\", \"user\" or \"group\")", arg );
+			x_pam_syslog ( pam, LOG_ERR, "invalid argument: \"%s\" (see \"man 2 pam_ns\"; should be \"session\", \"user\" or \"group\")", arg );
 			return PAM_SESSION_ERR;
 		}
 

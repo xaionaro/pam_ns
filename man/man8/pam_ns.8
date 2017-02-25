@@ -65,15 +65,21 @@ CLONE_NEWNS
 .br
 CLONE_NEWPID
 .br
-CLONE_NEWUSER
-.br
 CLONE_NEWUTS
+.br
+CLONE_NEWUSER
+.I uidmap gidmap
 .RE
 .br
  
 .br
-For details read
+For details (of CLONE_*) read
 .BR unshare (2).
+
+.IR uidmap " and " gidmap
+are given in format:
+.BR ID-inside-ns : ID-outside-ns : length
+(for example "CLONE_NEWUSER 0:0:1000 0:0:1000).
 
 .SH EXAMPLES
 session optional pam_ns.so user CLONE_NEWIPC CLONE_NEWNS
