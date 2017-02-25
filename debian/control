@@ -2,7 +2,7 @@ Source: pam-ns
 Section: admin
 Priority: optional
 Maintainer: Dmitry Yu Okunev <dyokunev@ut.mephi.ru>
-Build-Depends: debhelper (>=9), libpam0g-dev, libprocps3-dev
+Build-Depends: debhelper (>=9), libpam0g-dev, libprocps-dev
 Standards-Version: 3.9.8
 Homepage: https://github.com/xaionaro/pam_ns
 #Vcs-Git: git://anonscm.debian.org/collab-maint/pam-ns.git
